@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  react:
+    build:
+      context: ./
+      dockerfile: Dockerfile.prod  # Use the production Dockerfile
+    environment:
+      - NODE_ENV=production  # Set environment to production
+    ports:
+      - '80:80'  # Expose the container on port 80
+    container_name: react-ui-prod
