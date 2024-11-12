@@ -15,13 +15,19 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useEffect } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { useMutation } from "react-query";
 
 interface LoginFormInputs {
   username: string;
   password: string;
+}
+
+interface LoginResponse {
+  access: string;
+  refresh: string;
+  message?: string; // Optional if your API provides a message
 }
 
 const Login: React.FC = () => {
@@ -42,7 +48,7 @@ const Login: React.FC = () => {
     },
     {
       onSuccess: (data: any) => {
-        const { access, refresh } = data;
+        const { access, refresh, message } = data;
 
         setSession({
           username: getValues("username"),
@@ -52,16 +58,18 @@ const Login: React.FC = () => {
 
         toast({
           title: "Login successful.",
-          description: data.message,
+          description: message || "You have successfully logged in.",
           status: "success",
           duration: 3000,
           isClosable: true,
         });
-
-        router.push("/dashboard");
       },
-      onError: (data: any) => {
-        const description = data?.detail ?? "Server Error. Please try again.";
+      onError: (error: any) => {
+        // Adjusted error handling based on your API's error response
+        const description =
+          error?.response?.data?.detail ||
+          error?.response?.data?.message ||
+          "Server Error. Please try again.";
         toast({
           title: "Login failed.",
           description,
@@ -77,9 +85,12 @@ const Login: React.FC = () => {
     mutation.mutate(data);
   };
 
-  if (isLoggedIn()) {
-    router.push("/dashboard");
-  }
+  // Move redirection logic inside useEffect
+  useEffect(() => {
+    if (isLoggedIn()) {
+      router.push("/dashboard");
+    }
+  }, [isLoggedIn, router]);
 
   // Chakra UI dark mode colors (no light variant)
   const bg = "gray.900";
@@ -107,15 +118,15 @@ const Login: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <VStack spacing={8}>
             <FormControl isInvalid={!!errors.username}>
-              <FormLabel color={textColor}>username</FormLabel>
+              <FormLabel color={textColor}>Username</FormLabel>
               <Input
-                type="username"
+                type="text"
                 placeholder="Enter your username"
                 bg={inputBg}
                 borderColor={inputBorder}
                 color={textColor}
                 _placeholder={{ color: placeholderColor }}
-                {...register("username", { required: "username is required" })}
+                {...register("username", { required: "Username is required" })}
               />
               <FormErrorMessage>
                 {errors.username && errors.username.message}

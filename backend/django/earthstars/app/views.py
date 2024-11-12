@@ -1,4 +1,5 @@
 from rest_framework import status, permissions
+from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import authenticate
@@ -6,20 +7,26 @@ from django.contrib.auth.models import User
 from .serializers import LoginSerializer, UserSerializer, PeopleSerializer
 from .models import People
 
+
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
-            username = serializer.validated_data['username']
-            password = serializer.validated_data['password']
+            username = serializer.validated_data["username"]
+            password = serializer.validated_data["password"]
             user = authenticate(username=username, password=password)
             if user is not None:
                 # Generate token if needed or return user info
-                return Response({'id': user.id, 'username': user.username, 'email': user.email})
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"id": user.id, "username": user.username, "email": user.email}
+                )
+            return Response(
+                {"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class UserDetailView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -32,7 +39,9 @@ class UserDetailView(APIView):
                 serializer = UserSerializer(user)
                 return Response(serializer.data)
             except User.DoesNotExist:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+                return Response(
+                    {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
+                )
         else:
             # List all users
             users = User.objects.all()
@@ -52,7 +61,9 @@ class UserDetailView(APIView):
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         serializer = UserSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
@@ -67,7 +78,10 @@ class UserDetailView(APIView):
             user.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
 
 class PeopleListView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -84,33 +98,35 @@ class PeopleListView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class PeopleDetailView(APIView):
     permission_classes = [permissions.AllowAny]
 
-    def get(self, request, pk):
+    def get(self, request, username):
         try:
-            person = People.objects.get(pk=pk)
+            person = People.objects.get(user__username=username)
         except People.DoesNotExist:
-            return Response({"error": "Person not found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = PeopleSerializer(person)
-        return Response(serializer.data)
+            return Response(
+                {
+                    "data": {
+                        "error": f"No People matches the given query for username: {username}"
+                    }
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
-    def put(self, request, pk):
-        try:
-            person = People.objects.get(pk=pk)
-        except People.DoesNotExist:
-            return Response({"error": "Person not found"}, status=status.HTTP_404_NOT_FOUND)
-        
+        serializer = PeopleSerializer(person)
+        return Response({"data": serializer.data})
+
+    def put(self, request, username):
+        person = get_object_or_404(People, user__username=username)
         serializer = PeopleSerializer(person, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"data": serializer.data})
+        return Response({"data": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, pk):
-        try:
-            person = People.objects.get(pk=pk)
-            person.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except People.DoesNotExist:
-            return Response({"error": "Person not found"}, status=status.HTTP_404_NOT_FOUND)
+    def delete(self, request, username):
+        person = get_object_or_404(People, user__username=username)
+        person.delete()
+        return Response({"data": None}, status=status.HTTP_204_NO_CONTENT)
