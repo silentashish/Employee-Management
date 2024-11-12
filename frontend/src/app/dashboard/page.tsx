@@ -64,6 +64,10 @@ const Dashboard: React.FC<DashboardProps> = () => {
   const tagBg = "gray.700";
   const placeholderColor = "gray.500";
 
+  // Move useColorModeValue hooks to the top level
+  const borderColor = useColorModeValue("gray.300", "gray.600");
+  const boxBg = useColorModeValue("gray.100", "gray.800");
+
   useHandlePrivateRoute();
   const { session } = useSession();
   const router = useRouter();
@@ -113,8 +117,8 @@ const Dashboard: React.FC<DashboardProps> = () => {
         </Heading>
         <VStack spacing={4}>
           <Box
-            borderColor={useColorModeValue("gray.300", "gray.600")}
-            bg={useColorModeValue("gray.100", "gray.800")}
+            borderColor={borderColor}
+            bg={boxBg}
             p={4}
             borderRadius="md"
             textAlign="center"
