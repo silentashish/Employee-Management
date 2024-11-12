@@ -13,7 +13,7 @@ services:
       DB_NAME: mydatabase
       DB_USER: myuser
       DB_PASSWORD: mypassword
-      DB_HOST: 10.0.0.30
+      DB_HOST: 45.55.187.22
       DB_PORT: 5432
 
   grafana:
@@ -29,7 +29,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - GF_SECURITY_ALLOW_EMBEDDING=true
       - GF_DATABASE_TYPE=postgres
-      - GF_DATABASE_HOST=10.0.0.30:5432
+      - GF_DATABASE_HOST=45.55.187.22:5432
       - GF_DATABASE_NAME=mydatabase
       - GF_DATABASE_USER=myuser
       - GF_DATABASE_PASSWORD=mypassword
