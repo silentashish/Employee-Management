@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useMutation } from "react-query";
 import { useForm, SubmitHandler } from "react-hook-form";
 import {
   Box,
@@ -13,10 +14,11 @@ import {
   useToast,
   Image,
 } from "@chakra-ui/react";
-import Select from "react-select"; // Import react-select
-import Navbar from "../../components/Navbar";
+import Select, { MultiValue } from "react-select"; // Import react-select
 import NavWrapper from "@/components/NavWrapper";
 import useHandlePrivateRoute from "@/hooks/useHandlePrivateRoute";
+import { axiosClient } from "@/utils/axios";
+import { useSession } from "@/context/SessionContext";
 
 interface ProfileFormInputs {
   name: string;
@@ -33,6 +35,35 @@ const expertiseOptions = [
 ];
 
 const CompleteProfile: React.FC = () => {
+  const { session } = useSession();
+  const username = session.username;
+
+  const mutation = useMutation(
+    async (profileData: FormData | { name: string; email: string; expertise: string[] }) => {
+      return await axiosClient.put(`/api/user/${username}/`, profileData, {
+        headers: profileData instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined,
+      });
+    },
+    {
+      onSuccess: () => {
+        toast({
+          title: "Profile updated successfully!",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Failed to update profile.",
+          description: error.message,
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      },
+    }
+  );
   useHandlePrivateRoute();
 
   const {
@@ -43,19 +74,28 @@ const CompleteProfile: React.FC = () => {
   } = useForm<ProfileFormInputs>();
   const toast = useToast();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [selectedExpertise, setSelectedExpertise] = useState<
-    { label: string; value: string }[]
-  >([]);
+  const [selectedExpertise, setSelectedExpertise] = useState<MultiValue<{ label: string; value: string }>>([]);
+// ... existing code ...
 
   const onSubmit: SubmitHandler<ProfileFormInputs> = (data) => {
-    const profileData = { ...data, expertise: selectedExpertise };
-    // Handle profile submission logic
-    toast({
-      title: "Profile updated successfully!",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
+    const profileData = {
+      name: data.name,
+      email: data.email,
+      expertise: selectedExpertise.map((exp) => exp.value),
+    };
+
+    if (data.profileImage.length > 0) {
+      const file = data.profileImage[0];
+      const formData = new FormData();
+      formData.append("profileImage", file);
+      formData.append("name", data.name);
+      formData.append("email", data.email);
+      formData.append("expertise", JSON.stringify(selectedExpertise.map((exp) => exp.value)));
+
+      mutation.mutate(formData);
+    } else {
+      mutation.mutate(profileData);
+    }
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,7 +109,7 @@ const CompleteProfile: React.FC = () => {
     }
   };
 
-  const handleExpertiseChange = (selectedOptions: any) => {
+  const handleExpertiseChange = (selectedOptions: MultiValue<{ label: string; value: string }>) => {
     setSelectedExpertise(selectedOptions || []);
   };
 

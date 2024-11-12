@@ -1,9 +1,15 @@
+import os
+from django.conf import settings
 from rest_framework import status, permissions
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.utils import timezone
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from rest_framework.parsers import MultiPartParser, FormParser
 from .serializers import LoginSerializer, UserSerializer, PeopleSerializer
 from .models import People
 
@@ -100,6 +106,7 @@ class PeopleListView(APIView):
 
 
 class PeopleDetailView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, username):
@@ -116,11 +123,34 @@ class PeopleDetailView(APIView):
             )
 
         serializer = PeopleSerializer(person)
-        return Response({"data": serializer.data})
+        # Construct the full URL for the photo
+        backend_host = os.getenv("BACKEND_HOST", "http://localhost:8000")
+        photo_url = f"{backend_host}/media/{person.photo}" if person.photo else None
+        # Update the serialized data with the photo URL
+        data = serializer.data
+        data["photo"] = photo_url
+        return Response({"data": data})
 
     def put(self, request, username):
         person = get_object_or_404(People, user__username=username)
-        serializer = PeopleSerializer(person, data=request.data)
+        data = request.data.copy()
+
+        # Check if a new profile image is provided
+        if "profileImage" in request.FILES:
+            image_file = request.FILES["profileImage"]
+            # Generate new filename
+            timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
+            new_filename = (
+                f"{username}_{timestamp}{os.path.splitext(image_file.name)[1]}"
+            )
+            # Save the file with the new name in the media directory
+            saved_path = default_storage.save(
+                new_filename, ContentFile(image_file.read())
+            )
+            # Update the photo field with the relative path
+            person.photo = saved_path
+
+        serializer = PeopleSerializer(person, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({"data": serializer.data})
