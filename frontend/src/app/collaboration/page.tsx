@@ -12,7 +12,7 @@ const Collaborate = () => {
     <NavWrapper>
       <Box style={{ width: "100%", height: "100vh" }}>
         <iframe
-          src="http://localhost:3000/dashboards"
+          src="http://157.245.212.110:3000/d/fe3zd0ekupzwgd/new-dashboard?from=now-6h&to=now&timezone=browser"
           width="100%"
           height="100%"
           title="Grafana Dashboard"
